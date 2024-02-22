@@ -7,6 +7,12 @@ var DIRECTION = {
     RIGHT: 4
 };
 
+var COLORS = ['#FFBA08', '#FAA307', '#F48C06', '#E85D04', '#DC2F02',
+    '#D00000', '#9D0208', '#6A040F', '#370617', '#03071E']
+
+var SPEEDS = [6, 8, 10]
+var PADDLE_SPEED = 12
+
 // The ball object (The cube that bounces back and forth)
 var Ball = {
     new: function (incrementedSpeed) {
@@ -15,9 +21,9 @@ var Ball = {
             height: 18,
             x: (this.canvas.width / 2) - 9,
             y: (this.canvas.height / 2) - 9,
-            moveX: DIRECTION.IDLE,
-            moveY: DIRECTION.IDLE,
-            speed: incrementedSpeed || 7
+            moveX: Math.random() < 0.5 ? DIRECTION.LEFT : DIRECTION.RIGHT,
+            moveY: DIRECTION.UP,
+            speed: incrementedSpeed || SPEEDS[0]
         };
     },
 
@@ -25,7 +31,7 @@ var Ball = {
         if (ball.x <= 0) ball.moveX = DIRECTION.RIGHT;
         if (ball.x >= canvas.width - ball.width) ball.moveX = DIRECTION.LEFT;
         if (ball.y <= 0) ball.moveY = DIRECTION.DOWN;
-        if (ball.y >= canvas.height - ball.height) ball.moveY = DIRECTION.UP;
+        if (ball.y >= canvas.height - ball.height) this.running = false;
 
         // Move ball in intended direction based on moveY and moveX values
         if (ball.moveY === DIRECTION.UP) ball.y -= (ball.speed);
@@ -52,9 +58,8 @@ var Paddle = {
             height: 18,
             x: side === 'left' ? 300 : this.canvas.width / 2 + 300,
             y: (this.canvas.height) - 75,
-            score: 0,
             move: DIRECTION.IDLE,
-            speed: 8
+            speed: PADDLE_SPEED
         };
     },
 
@@ -84,21 +89,76 @@ var Game = {
         this.canvas.style.width = (this.canvas.width / 2) + 'px';
         this.canvas.style.height = (this.canvas.height / 2) + 'px';
 
+        this.score = 0
+        this.level = 1
+
         this.padL = Paddle.new.call(this, 'left');
         this.padR = Paddle.new.call(this, 'right');
 
-        this.ball1 = Ball.new.call(this);
-        this.ball1.moveX = DIRECTION.LEFT
-        this.ball1.moveY = DIRECTION.DOWN
-
-        this.ball2 = Ball.new.call(this);
-        this.ball2.moveX = DIRECTION.RIGHT
-        this.ball2.moveY = DIRECTION.DOWN
+        this.balls = [Ball.new.call(this)]
 
         this.running = false;
-        this.color = '#8c52ff';
+        this.color = COLORS[0];
 
         Pong.listen();
+    },
+
+    addScore: function () {
+        this.score++
+        console.log(this.score)
+        if (this.score == 1) {
+            this.level = 2
+            this.color = COLORS[1]
+            this.balls.push(Ball.new.call(this))
+        }
+        if (this.score == 4) {
+            this.level = 3
+            this.color = COLORS[2]
+            this.balls.push(Ball.new.call(this))
+        }
+        if (this.score == 9) {
+            this.level = 4
+            this.color = COLORS[3]
+            this.balls[0].speed = SPEEDS[1]
+        }
+        if (this.score == 16) {
+            this.level = 5
+            this.color = COLORS[4]
+            this.balls[0].speed = SPEEDS[0]
+            this.balls.push(Ball.new.call(this))
+        }
+        if (this.score == 25) {
+            this.level = 6
+            this.color = COLORS[5]
+            this.balls[0].speed = SPEEDS[1]
+        }
+        if (this.score == 36) {
+            this.level = 7
+            this.color = COLORS[6]
+            this.balls[1].speed = SPEEDS[1]
+        }
+        if (this.score == 45) {
+            this.level = 8
+            this.color = COLORS[7]
+            this.balls[1].speed = SPEEDS[2]
+        }
+        if (this.score == 53) {
+            this.level = 9
+            this.color = COLORS[8]
+            this.balls[2].speed = SPEEDS[2]
+        }
+        if (this.score == 60) {
+            this.level = 10
+            this.color = COLORS[9]
+            this.balls.push(Ball.new.call(this))
+            this.balls[0].speed = SPEEDS[1]
+            this.balls[1].speed = SPEEDS[1]
+            this.balls[2].speed = SPEEDS[1]
+            this.balls[3].speed = SPEEDS[1]
+        }
+        if (this.score == 66) {
+            this.running = false
+        }
     },
 
     updateBallPadCollision: function (ball, pad) {
@@ -106,6 +166,7 @@ var Game = {
             if (ball.x <= pad.x + pad.width && ball.x + ball.width >= pad.x) {
                 ball.moveY = DIRECTION.UP;
                 ball.y = (pad.y - ball.height);
+                this.addScore.call(this)
             }
         }
     },
@@ -114,8 +175,7 @@ var Game = {
     update: function () {
         if (this.running) {
             // If the ball collides with the bound limits - correct the x and y coords.
-            Ball.update(this.ball1, this.canvas)
-            Ball.update(this.ball2, this.canvas)
+            this.balls.forEach(ball => Ball.update.call(this, ball, this.canvas))
 
             // Move padL if they padL.move value was updated by a keyboard event
             Paddle.update(this.padL)
@@ -123,15 +183,13 @@ var Game = {
             // Move padR if they padR.move value was updated by a keyboard event
             Paddle.update(this.padR)
 
-            // Handle padL-Ball collisions
-            this.updateBallPadCollision(this.ball1, this.padL)
+            this.balls.forEach(ball => {
+                // Handle padL-Ball collisions
+                this.updateBallPadCollision.call(this, ball, this.padL)
 
-            // Handle padR-Ball collisions
-            this.updateBallPadCollision(this.ball1, this.padR)
-
-            this.updateBallPadCollision(this.ball2, this.padL)
-
-            this.updateBallPadCollision(this.ball2, this.padR)
+                // Handle padR-Ball collisions
+                this.updateBallPadCollision.call(this, ball, this.padR)
+            })
 
         }
     },
@@ -167,17 +225,29 @@ var Game = {
         Paddle.draw(this.context, this.padR)
 
         // Draw the Ball
-        Ball.draw(this.context, this.ball1)
-        Ball.draw(this.context, this.ball2)
+        this.balls.forEach(ball => Ball.draw(this.context, ball))
+
+        this.context.fillText(
+            this.score.toString(),
+            (this.canvas.width / 2),
+            (this.canvas.height / 2),
+        );
+
+        Pong.context.font = '40px Courier New';
+        this.context.fillText(
+            'level:' + this.level.toString(),
+            (this.canvas.width / 2),
+            (100),
+        );
 
 
 
         // Draw the net (Line in the middle)
         this.context.beginPath();
-        this.context.setLineDash([7, 15]);
-        this.context.moveTo((this.canvas.width / 2), this.canvas.height - 140);
-        this.context.lineTo((this.canvas.width / 2), 140);
-        this.context.lineWidth = 10;
+        this.context.setLineDash([14, 15]);
+        this.context.moveTo((this.canvas.width / 2), this.canvas.height - 100);
+        this.context.lineTo((this.canvas.width / 2), 600);
+        this.context.lineWidth = 8;
         this.context.strokeStyle = '#ffffff';
         this.context.stroke();
 
