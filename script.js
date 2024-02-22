@@ -167,6 +167,7 @@ var Game = {
                 ball.moveY = DIRECTION.UP;
                 ball.y = (pad.y - ball.height);
                 this.addScore.call(this)
+                return true
             }
         }
     },
@@ -185,10 +186,10 @@ var Game = {
 
             this.balls.forEach(ball => {
                 // Handle padL-Ball collisions
-                this.updateBallPadCollision.call(this, ball, this.padL)
+                collides = this.updateBallPadCollision.call(this, ball, this.padL)
 
                 // Handle padR-Ball collisions
-                this.updateBallPadCollision.call(this, ball, this.padR)
+                if (!collides) this.updateBallPadCollision.call(this, ball, this.padR)
             })
 
         }
